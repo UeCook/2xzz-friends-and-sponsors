@@ -1,0 +1,8 @@
+{
+  "name": "friends-and-sponsors",
+  "private": true,
+  "description": "SVAF 友链和赞助数据源 — 构建后输出聚合 JSON",
+  "scripts": {
+    "build": "node scripts/build.js"
+  }
+}

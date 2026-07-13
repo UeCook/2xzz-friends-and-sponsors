@@ -1,0 +1,72 @@
+/**
+ * Build script for friends-and-sponsors
+ *
+ * Scans data/ for individual JSON files, validates, sorts,
+ * and generates friends.json / sponsors.json at repo root.
+ *
+ * Usage: node scripts/build.js
+ */
+
+const fs = require('fs');
+const path = require('path');
+
+const ROOT = path.resolve(__dirname, '..');
+const OUT = path.join(ROOT, 'dist');
+const DATA_FRIENDS = path.join(ROOT, 'data', 'friends');
+const DATA_SPONSORS = path.join(ROOT, 'data', 'sponsors');
+
+function isNonEmptyString(v) { return typeof v === 'string' && v.trim().length > 0; }
+function isNullOrString(v)   { return v === null || typeof v === 'string'; }
+
+function loadAndValidate(dir, label, rules) {
+  if (!fs.existsSync(dir)) { console.warn(`⚠️  ${dir} not found`); return []; }
+  const files = fs.readdirSync(dir).filter(f => f.endsWith('.json'));
+  const result = [];
+  for (const f of files) {
+    try {
+      const data = JSON.parse(fs.readFileSync(path.join(dir, f), 'utf-8'));
+      if (!data || typeof data !== 'object' || Array.isArray(data)) {
+        console.error(`  ❌ ${f}: must be an object`); continue;
+      }
+      const errs = rules.flatMap(r => r(data));
+      if (errs.length) { console.error(`  ❌ ${f}: ${errs.join(', ')}`); continue; }
+      result.push(data);
+    } catch (e) { console.error(`  ❌ ${f}: ${e.message}`); }
+  }
+  console.log(`   → ${result.length}/${files.length} ${label} loaded`);
+  return result;
+}
+
+// ── Load ──
+console.log('\n📦 Friends...');
+const friends = loadAndValidate(DATA_FRIENDS, 'friends', [
+  d => !isNonEmptyString(d.name) ? ['name required'] : [],
+  d => !isNullOrString(d.avatar) ? ['avatar must be string or null'] : [],
+  d => !isNonEmptyString(d.url) ? ['url required'] : [],
+]);
+friends.sort((a, b) => a.name.localeCompare(b.name, 'zh-CN'));
+
+console.log('\n📦 Sponsors...');
+const sponsors = loadAndValidate(DATA_SPONSORS, 'sponsors', [
+  d => !isNonEmptyString(d.name) ? ['name required'] : [],
+  d => !isNullOrString(d.avatar) ? ['avatar must be string or null'] : [],
+  d => !isNonEmptyString(d.date) ? ['date required'] : [],
+  d => !isNonEmptyString(d.amount) ? ['amount required'] : [],
+]);
+sponsors.sort((a, b) => b.date.localeCompare(a.date));
+
+// ── Write ──
+fs.mkdirSync(OUT, { recursive: true });
+fs.writeFileSync(path.join(OUT, 'friends.json'), JSON.stringify(friends, null, 2));
+fs.writeFileSync(path.join(OUT, 'sponsors.json'), JSON.stringify(sponsors, null, 2));
+
+// Copy Cloudflare Pages headers/config
+for (const file of ['_headers']) {
+  const src = path.join(ROOT, 'src', file);
+  if (fs.existsSync(src)) {
+    fs.copyFileSync(src, path.join(OUT, file));
+  }
+}
+
+console.log(`\n✅ dist/friends.json (${friends.length})`);
+console.log(`✅ dist/sponsors.json (${sponsors.length})`);
