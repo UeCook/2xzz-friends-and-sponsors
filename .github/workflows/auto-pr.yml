@@ -22,7 +22,6 @@ jobs:
   triage:
     if: ${{ github.event_name == 'pull_request_target' }}
     runs-on: ubuntu-latest
-    container: debian:bookworm-slim
     timeout-minutes: 15
     steps:
       - name: Setup Node.js
@@ -32,8 +31,8 @@ jobs:
 
       - name: Install system dependencies
         run: |
-          apt-get update
-          apt-get install -y ca-certificates curl
+          sudo apt-get update
+          sudo apt-get install -y ca-certificates curl
 
       - name: Install Playwright
         run: |
@@ -653,7 +652,6 @@ jobs:
   verify_and_merge:
     if: ${{ github.event_name == 'issue_comment' && github.event.issue.pull_request && github.event.comment.body == '准备完毕' }}
     runs-on: ubuntu-latest
-    container: debian:bookworm-slim
     timeout-minutes: 15
     steps:
       - name: Setup Node.js
@@ -663,8 +661,8 @@ jobs:
 
       - name: Install system dependencies
         run: |
-          apt-get update
-          apt-get install -y ca-certificates curl
+          sudo apt-get update
+          sudo apt-get install -y ca-certificates curl
 
       - name: Install Playwright
         run: |
